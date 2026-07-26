@@ -1,0 +1,41 @@
+@startuml
+
+object "Spec.tla" as spec {
+  state variables
+  Init / Next
+}
+
+object "Spec_anim.tla" as anim {
+  EXTENDS Spec
+  EXTENDS SVG
+  defines AnimView
+}
+
+object "SVG Module" as svg {
+  Circle()
+  Group()
+  Rect()
+}
+
+object "JS Interpreter" as eval {
+  eval.js
+  runs in browser
+}
+
+object "Spectacle UI" as ui {
+  trace explorer
+  state stepping
+}
+
+object "Rendered SVG" as output {
+  animated visualization
+}
+
+spec <|-- anim : extends
+svg <|-- anim : extends
+ui --> eval : evaluate AnimView\nfor current state
+eval --> anim : resolves AnimView
+eval --> output : SVG element record
+ui *-- output : displays
+
+@enduml

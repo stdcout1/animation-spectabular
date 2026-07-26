@@ -3,12 +3,18 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    llm-agents.url = "github:numtide/llm-agents.nix";
+  };
+  nixConfig = {
+    extra-substituters = [ "https://cache.numtide.com" ];
+    extra-trusted-public-keys = [ "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=" ];
   };
 
   outputs =
-    { nixpkgs, ... }:
+    { nixpkgs, llm-agents, ... }:
     let
       inherit (nixpkgs) lib;
+      inherit llm-agents;
       forAllSystems = lib.genAttrs lib.systems.flakeExposed;
     in
     {
@@ -16,12 +22,15 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          cc = llm-agents.packages.${system};
         in
         {
           default = pkgs.mkShell {
             packages = [
               pkgs.python3
               pkgs.uv
+              pkgs.plantuml
+              cc.claude-code
             ];
 
             env = lib.optionalAttrs pkgs.stdenv.isLinux {

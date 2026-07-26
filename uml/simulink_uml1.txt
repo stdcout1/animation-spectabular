@@ -1,0 +1,46 @@
+@startuml
+
+object "Dashboard Controls" as controls {
+  requested light mode
+  left / right selection
+}
+
+object "LightingManager" as manager
+
+object "LeftHeadlight" as left {
+  setMode
+  getMode
+}
+
+object "RightHeadlight" as right {
+  setMode
+  getMode
+}
+
+object "Dashboard Displays" as displays {
+  left light status
+  right light status
+  failure indicators
+}
+
+object "Analysis Views" as analysis {
+  Data Inspector
+  Sequence Viewer
+}
+
+controls --> manager : input signals\nor parameters
+
+manager --> left : asynchronous calls
+manager --> right : asynchronous calls
+
+left --> manager : mode and status
+right --> manager : mode and status
+
+left --> displays : output signals
+right --> displays : output signals
+
+manager --> analysis
+left --> analysis
+right --> analysis
+
+@enduml

@@ -1,0 +1,51 @@
+@startuml
+
+object "LightingManager" as manager {
+  changeLightMode
+  checkLights
+}
+
+object "LightInterface" as interface {
+  setMode(lightMode)
+  getMode()
+}
+
+object "LeftHeadlight" as left {
+  instance of HeadLight
+}
+
+object "RightHeadlight" as right {
+  instance of HeadLight
+}
+
+object "Logging" as logging {
+  records signals
+  records service activity
+}
+
+object "Simulation Data Inspector" as inspector {
+  signal plots
+}
+
+object "Sequence Viewer" as sequence {
+  function call order
+  message execution
+}
+
+manager --> interface : asynchronous\nservice calls
+interface --> left : setMode / getMode
+interface --> right : setMode / getMode
+
+left --> manager : mode and status
+right --> manager : mode and status
+
+manager --> logging
+left --> logging
+right --> logging
+
+logging --> inspector : logged signals
+manager --> sequence : call messages
+left --> sequence : responses
+right --> sequence : responses
+
+@enduml
