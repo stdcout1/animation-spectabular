@@ -11,6 +11,8 @@ dependencies = [
     "ipykernel>=7.3.0",
     "ipywidgets>=8.1.8",
     "jupyter>=1.1.1",
+    "mathml-to-latex>=1.0.0",
     "notebook>=7.6.0",
     "plantuml-markdown>=3.11.2",
+    "z3-solver>=5.0.0.0",
 ]
