@@ -1,0 +1,21 @@
+doument limitations of each approach
+-enviroment it runs and dosent
+    -colab (all 4 work)
+    -juypter lite (anywidget dosent work)
+    -vscode (number one dosent work)
+    - viola (ipycanvas dosent work)
+- how can they be printed?
+    -pdfs?
+
+go in the examples and add buttons for each one.
+
+make a python interface for describing animation:
+anim = load(...)
+
+anim['button1up.color'] = (if 'b1u' then white else black, "tween")
+anim['button1up.color'] = (if 'b1u' then white else black, "custom")
+
+keep old scenario handlers
+
+table solver:
+takes in [("event", "corresenponding table")]

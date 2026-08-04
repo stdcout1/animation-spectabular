@@ -14,5 +14,6 @@ dependencies = [
     "mathml-to-latex>=1.0.0",
     "notebook>=7.6.0",
     "plantuml-markdown>=3.11.2",
+    "voila>=0.5.12",
     "z3-solver>=5.0.0.0",
 ]
