@@ -4,14 +4,23 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     llm-agents.url = "github:numtide/llm-agents.nix";
+    playwright.url = "github:pietdevries94/playwright-web-flake";
   };
+
   nixConfig = {
     extra-substituters = [ "https://cache.numtide.com" ];
-    extra-trusted-public-keys = [ "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=" ];
+    extra-trusted-public-keys = [
+      "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+    ];
   };
 
   outputs =
-    { nixpkgs, llm-agents, ... }:
+    {
+      nixpkgs,
+      llm-agents,
+      playwright,
+      ...
+    }:
     let
       inherit (nixpkgs) lib;
       inherit llm-agents;
@@ -21,7 +30,17 @@
       devShells = forAllSystems (
         system:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
+          overlay = final: prev: {
+            inherit (playwright.packages.${system})
+              playwright-driver
+              ;
+          };
+
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ overlay ];
+          };
+
           cc = llm-agents.packages.${system};
         in
         {
@@ -30,6 +49,7 @@
               pkgs.python3
               pkgs.uv
               pkgs.plantuml
+              pkgs.pandoc
               cc.claude-code
             ];
 
@@ -43,6 +63,9 @@
               unset PYTHONPATH
               uv sync
               . .venv/bin/activate
+
+              export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+              export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
             '';
           };
         }
