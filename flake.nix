@@ -50,6 +50,8 @@
               pkgs.uv
               pkgs.plantuml
               pkgs.pandoc
+              pkgs.inkscape
+              pkgs.texliveFull
               cc.claude-code
             ];
 

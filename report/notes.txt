@@ -1,13 +1,9 @@
-doument limitations of each approach
--enviroment it runs and dosent
-    -colab (all 4 work)
-    -juypter lite (anywidget dosent work)
-    -vscode (number one dosent work)
-    - viola (ipycanvas dosent work)
-- how can they be printed?
-    -pdfs?
+when priting. expand each state. allow for excution style running
 
-go in the examples and add buttons for each one.
+have one formal state and each image.
+on each await(transition) display the updated state. which is unique widget with unique display state, but shares the overall state.
+
+but we will want the old method.
 
 make a python interface for describing animation:
 anim = load(...)
@@ -19,3 +15,29 @@ keep old scenario handlers
 
 table solver:
 takes in [("event", "corresenponding table")]
+
+buttons
+
+xmldiff to genrate tranistions instead of specificying it your self.
+- this guarenteen the tranisition are exactly mapped to formal states.
+- the diff aniamtion should be able to sequence animations. so we can
+"left parenthsize" the operation...
+- it should be assocative (a + b) + c = a + (b + c)
+- not symetric a + b \neq b + a
+- union operator (|) 
+- (a1 | a2) + b = (a1 + b) | (a2 + b)
+- prove using a ast reprresnation,
+
+views of the same animation. all using same formal state.
+
+migrate from css transitions to svg animations. 
+
+use the style guide of acm to generate style.
+
+https://github.com/cduck/drawsvg/blob/63ae2c88fadd92e132f2b3e5312c9e92a2e89b75/drawsvg/native_animation/playback_control_js.py#L3
+
+to add playback control.
+
+twin elevatar() make a function that takes in states() and returns the new svg.
+
+then this svg is animatied using the xmldiffer and represented. 

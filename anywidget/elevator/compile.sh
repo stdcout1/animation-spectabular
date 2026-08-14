@@ -1,1 +1,1 @@
-jupyter nbconvert   --to webpdf   --execute   --ExecutePreprocessor.store_widget_state=True   Elevator.ipynb
+jupyter nbconvert   --to pdf   --execute   --ExecutePreprocessor.store_widget_state=True   Elevator.ipynb
