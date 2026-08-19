@@ -5,7 +5,7 @@
 %===============================================================================
 
 ((* block docclass *))
-\documentclass[sigconf,screen=true,review=false]{acmart}
+\documentclass[acmsmall,screen=true,review=false]{acmart}
 ((* endblock docclass *))
 
 % acmart computes its own two-column page geometry; the default nbconvert
@@ -78,9 +78,15 @@
 
 ((* block commands *))
 ((( super() )))
-% This is a standalone report, not an ACM publication -- suppress the
-% rights/copyright footer and the "ACM Reference Format" / CCS boxes that
-% assume a real venue and DOI.
+% This is a standalone report, not an ACM publication -- nonacm=true (see
+% docclass above) already drops the conference/journal running headers and
+% the "ACM Reference Format" / rights footer. \setcopyright{none} and the
+% explicit printacmref/printccs=false belt-and-suspenders this for older
+% acmart versions where nonacm alone doesn't fully suppress them.
 %\setcopyright{none}
 %\settopmatter{printacmref=false, printccs=false}
 ((* endblock commands *))
+
+% The base nbconvert template calls \maketitle itself, before any cell
+% content (including cell 0, a raw cell) has been rendered. So we remove it
+((* block maketitle *))((* endblock maketitle *))
