@@ -1,0 +1,86 @@
+((*- extends 'latex/index.tex.j2' -*))
+
+%===============================================================================
+% ACM (acmart, manuscript format) overrides
+%===============================================================================
+
+((* block docclass *))
+\documentclass[sigconf,screen=true,review=false]{acmart}
+((* endblock docclass *))
+
+% acmart computes its own two-column page geometry; the default nbconvert
+% template's \geometry{...} call would clobber it, so drop it here.
+((* block margins *))
+((* endblock margins *))
+
+% acmart already \RequirePackage{amsmath}/{amssymb} (via newtxmath +
+% libertinust1math for the Libertine math font); loading them again here
+% redefines symbols like \Bbbk and is a fatal "already defined" error.
+((* block packages *))
+    \usepackage[breakable]{tcolorbox}
+    \usepackage{parskip} % Stop auto-indenting (to mimic markdown behaviour)
+    \usepackage{graphicx}
+    \setkeys{Gin}{keepaspectratio}
+    \let\Oldincludegraphics\includegraphics
+    \usepackage{caption}
+    \DeclareCaptionFormat{nocaption}{}
+    \captionsetup{format=nocaption,aboveskip=0pt,belowskip=0pt}
+
+    \usepackage{float}
+    \floatplacement{figure}{H}
+    \usepackage{enumerate}
+    \usepackage{textcomp}
+    \AtBeginDocument{%
+        \def\PYZsq{\textquotesingle}%
+    }
+    \usepackage{upquote}
+    \usepackage{eurosym}
+
+    \usepackage{iftex}
+    \ifPDFTeX
+        \IfFileExists{alphabeta.sty}{
+              \usepackage{alphabeta}
+          }{
+              \usepackage[mathletters]{ucs}
+              \usepackage[utf8x]{inputenc}
+          }
+    \fi
+
+    \usepackage{fancyvrb}
+    \usepackage{grffile}
+    \makeatletter
+    \@ifpackagelater{grffile}{2019/11/01}
+    {
+    }
+    {
+      \def\Gread@@xetex#1{%
+        \IfFileExists{"\Gin@base".bb}%
+        {\Gread@eps{\Gin@base.bb}}%
+        {\Gread@@xetex@aux#1}%
+      }
+    }
+    \makeatother
+    \usepackage[Export]{adjustbox}
+    \adjustboxset{max size={0.9\linewidth}{0.9\paperheight}}
+
+    % NOT \usepackage{titling}: it redefines \author/\maketitle for the
+    % plain-article assumptions of the default nbconvert template, which
+    % clobbers acmart's own multi-author \author/\affiliation bookkeeping
+    % (silently drops the author block and prints "No \author given").
+    \usepackage{longtable}
+    \usepackage{array}
+    \usepackage{calc}
+    \usepackage[inline]{enumitem}
+    \usepackage[normalem]{ulem}
+    \usepackage{soul}
+    \usepackage{mathrsfs}
+((* endblock packages *))
+
+((* block commands *))
+((( super() )))
+% This is a standalone report, not an ACM publication -- suppress the
+% rights/copyright footer and the "ACM Reference Format" / CCS boxes that
+% assume a real venue and DOI.
+%\setcopyright{none}
+%\settopmatter{printacmref=false, printccs=false}
+((* endblock commands *))
