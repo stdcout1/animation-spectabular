@@ -5,6 +5,9 @@ per element.
 
     svg_generator(state, recipe, base_svg): state -> concrete svg frame
     svg_diff(svg_a, svg_b): two frames -> Leaf animation
+    svg_apply(anim, base_svg, dur): the forward counterpart to svg_diff --
+            frame + Animation -> frame, with dur>0 embedding autoplaying
+            SMIL for tween ops instead of baking their final value
     animate_trace(states, recipe, base_svg): a scenario -> one Animation
 
 Animations combine with two operators:
@@ -33,7 +36,7 @@ import itertools
 import xml.etree.ElementTree as ET
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Any, Callable, FrozenSet, Optional, Tuple
+from typing import Any, Callable, FrozenSet, Optional, Sequence, Tuple, Union
 
 SVG_NS = "http://www.w3.org/2000/svg"
 ET.register_namespace("", SVG_NS)
@@ -549,12 +552,27 @@ def _emit_op(op: Op, by_id: dict, root, anim_id: str, begin: str, dur: float) ->
         return
 
 
-def compile_to_svg(anim: Animation, base_svg: str, leaf_dur: float = 1.0) -> str:
+def compile_to_svg(
+    anim: Animation,
+    base_svg: str,
+    leaf_dur: Union[float, Sequence[float]] = 1.0,
+) -> str:
+    """
+    leaf_dur is either one duration used for every Leaf (scalar, the
+    original behavior), or a sequence of durations consumed one per
+    TOP-LEVEL Seq child -- i.e. one per recorded transition, when `anim`
+    is seq(*history_animations) with identity steps pre-filtered out
+    (identity steps have no children to consume a duration, and seq()
+    drops them during normalization anyway). Every op nested inside a
+    given top-level child, however deep in further Seq/Par, shares that
+    child's duration. A non-Seq anim (e.g. only one non-identity step)
+    with a sequence leaf_dur uses the sequence's first entry.
+    """
     root = ET.fromstring(base_svg)
     by_id = {el.get("id"): el for el in root.iter() if el.get("id")}
     uid = itertools.count()
 
-    def emit(a: Animation, begin: str) -> str:
+    def emit(a: Animation, begin: str, dur: float) -> str:
         # returns a SMIL id-ref marking when `a` finishes, so a following
         # Seq sibling can chase it via begin="<that id>.end"
         if isinstance(a, Leaf):
@@ -562,19 +580,134 @@ def compile_to_svg(anim: Animation, base_svg: str, leaf_dur: float = 1.0) -> str
             for op in a.ops:
                 anim_id = f"a{next(uid)}"
                 end_id = end_id or anim_id
-                _emit_op(op, by_id, root, anim_id, begin, leaf_dur)
+                _emit_op(op, by_id, root, anim_id, begin, dur)
             return f"{end_id}.end" if end_id else begin
         if isinstance(a, Seq):
             cur = begin
             for child in a.children:
-                cur = emit(child, cur)
+                cur = emit(child, cur, dur)
             return cur
         if isinstance(a, Par):
-            ends = [emit(branch, begin) for branch in a.branches]
+            ends = [emit(branch, begin, dur) for branch in a.branches]
             return ends[0] if ends else begin
         raise TypeError(a)
 
-    emit(anim, "0s")
+    if isinstance(leaf_dur, (int, float)):
+        emit(anim, "0s", float(leaf_dur))
+    else:
+        durs = list(leaf_dur) or [1.0]
+        if isinstance(anim, Seq):
+            cur = "0s"
+            for i, child in enumerate(anim.children):
+                cur = emit(child, cur, durs[min(i, len(durs) - 1)])
+        else:
+            emit(anim, "0s", durs[0])
+
+    return ET.tostring(root, encoding="unicode")
+
+
+def svg_apply(anim: Animation, base_svg: str, dur: float = 0) -> str:
+    """
+    Forward counterpart to svg_diff: apply an Animation to a base frame
+    and return the resulting SVG. With dur == 0 (default), every op is
+    baked to its final value immediately, with no <animate>/
+    <animateTransform> elements added -- the result matches exactly what
+    svg_generator would produce for whichever state `anim`'s "b" side
+    came from. With dur > 0, tween ops instead get an autoplaying
+    (begin="0s") SMIL element animating old -> new over `dur` seconds --
+    meant for a single live transition, not a full multi-step trace (see
+    compile_to_svg for that, which chains multiple steps via begin=
+    "<id>.end" instead of playing them all at mount time).
+    """
+    root = ET.fromstring(base_svg)
+    by_id = {el.get("id"): el for el in root.iter() if el.get("id")}
+    uid = itertools.count()
+
+    def apply_leaf(leaf: Leaf) -> None:
+        for op in leaf.ops:
+            if op.kind == "add":
+                parent = (by_id.get(op.parent_id) if op.parent_id else None) or root
+                new_el = ET.fromstring(op.elem_xml)
+                parent.append(new_el)
+                if new_el.get("id"):
+                    by_id[new_el.get("id")] = new_el
+                continue
+            if op.kind == "remove":
+                el = by_id.pop(op.id, None)
+                if el is not None:
+                    parent = _find_parent(root, el)
+                    if parent is not None:
+                        parent.remove(el)
+                continue
+            if op.kind == "reparent":
+                el = by_id.get(op.id)
+                new_parent = (by_id.get(op.parent_id) if op.parent_id else None) or root
+                if el is None or new_parent is None:
+                    continue
+                old_parent = _find_parent(root, el)
+                if old_parent is not None and new_parent is not old_parent:
+                    old_parent.remove(el)
+                    new_parent.append(el)
+                continue
+
+            el = by_id.get(op.id)
+            if el is None:
+                continue
+
+            if op.attr == "text":
+                el.text = op.new
+                continue
+
+            if op.attr == "transform":
+                if isinstance(op.new, tuple):
+                    kind, args = op.new
+                    el.set("transform", f"{kind}({' '.join(_fmt_num(a) for a in args)})")
+                if (op.kind == "tween" and dur > 0
+                        and isinstance(op.old, tuple) and isinstance(op.new, tuple)
+                        and op.old[0] == op.new[0]):
+                    kind, oargs = op.old
+                    _, nargs = op.new
+                    smil = ET.SubElement(el, "animateTransform")
+                    smil.set("id", f"a{next(uid)}")
+                    smil.set("attributeName", "transform")
+                    smil.set("type", kind)
+                    smil.set("from", " ".join(_fmt_num(a) for a in oargs))
+                    smil.set("to", " ".join(_fmt_num(a) for a in nargs))
+                    smil.set("dur", f"{dur}s")
+                    smil.set("begin", "0s")
+                    smil.set("fill", "freeze")
+                continue
+
+            if op.new is not None:
+                el.set(op.attr, str(op.new))
+            elif op.attr in el.attrib:
+                del el.attrib[op.attr]
+
+            if op.kind == "tween" and dur > 0 and op.old is not None and op.new is not None:
+                smil = ET.SubElement(el, "animate")
+                smil.set("id", f"a{next(uid)}")
+                smil.set("attributeName", op.attr)
+                smil.set("from", str(op.old))
+                smil.set("to", str(op.new))
+                smil.set("dur", f"{dur}s")
+                smil.set("begin", "0s")
+                smil.set("fill", "freeze")
+
+    def walk(a: Animation) -> None:
+        if is_identity(a):
+            return
+        if isinstance(a, Leaf):
+            apply_leaf(a)
+        elif isinstance(a, Seq):
+            for child in a.children:
+                walk(child)
+        elif isinstance(a, Par):
+            for branch in a.branches:
+                walk(branch)
+        else:
+            raise TypeError(a)
+
+    walk(anim)
     return ET.tostring(root, encoding="unicode")
 
 
